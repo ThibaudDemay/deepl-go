@@ -10,7 +10,7 @@ import (
 // Test endpoint /usage with invalid API KEY
 // API return Forbidden error and no data
 func TestUsageErrInvalidAPIKey(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	c := NewClient("NO_API_KEY")
 
@@ -23,7 +23,7 @@ func TestUsageErrInvalidAPIKey(t *testing.T) {
 // Test endpoint /usage
 // API return data without error
 func TestUsage(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	c := NewClient(os.Getenv("DEEPL_TEST_API_KEY"))
 
