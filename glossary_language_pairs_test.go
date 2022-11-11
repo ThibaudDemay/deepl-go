@@ -18,7 +18,7 @@ func TestGlossaryLanguagePairsErrInvalidAPIKey(t *testing.T) {
 	res, err := c.GetGlossaryLanguagePairs()
 
 	assert.Nil(t, res)
-	assert.ErrorIs(t, err, errAuthorizationFailed)
+	assert.ErrorContains(t, err, errAuthorizationFailed.Error())
 }
 
 // Test endpoint /glossary-language-pairs

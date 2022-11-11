@@ -17,7 +17,7 @@ func TestLanguagesInvalidAPIKey(t *testing.T) {
 	res, err := c.GetSourceLanguages()
 
 	assert.Nil(t, res)
-	assert.ErrorIs(t, err, errForbidden)
+	assert.ErrorContains(t, err, errForbidden.Error())
 }
 
 // Test endpoint /languages with type to unknown

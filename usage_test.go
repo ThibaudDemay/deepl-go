@@ -17,7 +17,7 @@ func TestUsageErrInvalidAPIKey(t *testing.T) {
 	res, err := c.GetUsage()
 
 	assert.Nil(t, res)
-	assert.ErrorIs(t, err, errForbidden)
+	assert.ErrorContains(t, err, errForbidden.Error())
 }
 
 // Test endpoint /usage

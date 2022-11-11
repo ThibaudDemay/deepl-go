@@ -51,6 +51,11 @@ var (
 	documentResultEndpoint        = "/document/%d/result"
 )
 
+type ErrorMessage struct {
+	Message *string `json:"message,omitempty"`
+	Detail  *string `json:"detail,omitempty"`
+}
+
 type Client struct {
 	baseURL    string
 	APIKey     string
@@ -72,8 +77,6 @@ func NewClient(APIKey string) *Client {
 }
 
 func (c *Client) sendRequest(req *http.Request, dataInterface interface{}) error {
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.Header.Set("Accept", "application/json; charset=utf-8")
 	req.Header.Set("Authorization", fmt.Sprintf("DeepL-Auth-Key %s", c.APIKey))
 
 	res, err := c.HTTPClient.Do(req)
@@ -85,6 +88,17 @@ func (c *Client) sendRequest(req *http.Request, dataInterface interface{}) error
 
 	if res.StatusCode != http.StatusOK {
 		if err, ok := errCodes[res.StatusCode]; ok {
+			var errRes ErrorMessage
+			if errDec := json.NewDecoder(res.Body).Decode(&errRes); errDec == nil {
+				errText := err.Error()
+				if errRes.Message != nil {
+					errText += ", message : " + *errRes.Message
+				}
+				if errRes.Detail != nil {
+					errText += ", detail : " + *errRes.Detail
+				}
+				return errors.New(errText)
+			}
 			return err
 		}
 
