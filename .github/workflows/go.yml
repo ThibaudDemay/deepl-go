@@ -22,7 +22,10 @@ jobs:
         go-version: 1.19
         cache: true
 
-    - name: Test
+    - name: Test & Coverage
       env:
         DEEPL_TEST_API_KEY: ${{ secrets.DEEPL_TEST_API_KEY }}
-      run: go test -v ./...
+      run: go test  -race -coverprofile=coverage.txt -covermode=atomic
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
