@@ -1,7 +1,6 @@
 package deeplgo
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -33,8 +32,6 @@ func TestGlossaryLanguagePairs(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
-	fmt.Println(res)
 
 	assert.Nil(t, err)
 	assert.NotEmpty(t, res)

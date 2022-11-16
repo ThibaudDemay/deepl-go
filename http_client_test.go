@@ -1,0 +1,316 @@
+package deeplgo
+
+import (
+	"bytes"
+	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+// Test HTTPClient function ProcessError with request return 404
+// Function must return an error RequestResourceNotFound
+func TestHTTPClientProcessErrorBasic(t *testing.T) {
+	body := io.NopCloser(bytes.NewReader([]byte(``)))
+
+	hc := NewHTTPClient("NO_API_KEY")
+
+	err := hc.ProcessError(&http.Response{
+		StatusCode: 404,
+		Body:       body,
+	})
+
+	assert.ErrorIs(t, err, errRequestResourceNotFound)
+}
+
+// Test HTTPClient function ProcessError with data in response (var json)
+// include message only.
+// Function must return an error RequestResourceNotFound with message
+func TestHTTPClientProcessErrorWithMessage(t *testing.T) {
+	json := `{"message":"Message test"}`
+	body := io.NopCloser(bytes.NewReader([]byte(json)))
+
+	hc := NewHTTPClient("NO_API_KEY")
+
+	err := hc.ProcessError(&http.Response{
+		StatusCode: 404,
+		Body:       body,
+	})
+
+	errTarget := errRequestResourceNotFound.Error() + ", message : Message test"
+	assert.EqualError(t, err, errTarget)
+}
+
+// Test HTTPClient function ProcessError with data in response (var json)
+// include message and detail.
+// Function must return an error ResourceNotFound with message and detail
+func TestHTTPClientProcessErrorWithMessageAndDetail(t *testing.T) {
+	json := `{"message":"Message test","detail":"Detail test"}`
+	body := io.NopCloser(bytes.NewReader([]byte(json)))
+
+	hc := NewHTTPClient("NO_API_KEY")
+
+	err := hc.ProcessError(&http.Response{
+		StatusCode: 404,
+		Body:       body,
+	})
+
+	errTarget := errRequestResourceNotFound.Error() + ", message : Message test, detail : Detail test"
+	assert.EqualError(t, err, errTarget)
+}
+
+// Test HTTPClient function ProcessError were http return code not in err list.
+// Function must return an error unknow error with status code
+func TestHTTPClientProcessErrorWithUnknownError(t *testing.T) {
+	body := io.NopCloser(bytes.NewReader([]byte(``)))
+
+	hc := NewHTTPClient("NO_API_KEY")
+
+	err := hc.ProcessError(&http.Response{
+		StatusCode: 418,
+		Body:       body,
+	})
+
+	assert.EqualError(t, err, "unknown error, status code: 418")
+}
+
+type TestStruct struct {
+	Page  int      `json:"page" validate:"required"`
+	Count int      `json:"count" validate:"required"`
+	Data  []string `json:"data" validate:"required,dive,min=0"`
+}
+
+type TestArray []struct {
+	Title       string `json:"title" validate:"required"`
+	Description string `json:"description" validate:"required"`
+}
+
+// Test HTTPClient function SendRequest with Json object.
+// Function must return no error and decode response has correct struct
+func TestHTTPClientSendRequestWithJsonObject(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`{"page":1,"count":2,"data":["Apple","Pear"]}`))
+		},
+	))
+
+	defer server.Close()
+
+	hc := NewHTTPClient("NO_API_KEY")
+
+	req, err := http.NewRequest("GET", server.URL, nil)
+	assert.Nil(t, err)
+
+	res := TestStruct{}
+	err = hc.SendRequest(req, &res)
+	assert.Nil(t, err)
+	assert.Equal(t, TestStruct{
+		Page:  1,
+		Count: 2,
+		Data:  []string{"Apple", "Pear"},
+	}, res)
+}
+
+// Test HTTPClient function SendRequest with Json Array.
+// Function must return no error and decode response has correct struct
+func TestHTTPClientSendRequestWithJsonArray(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`[
+				{"title": "Apple", "description": "Forbidden fruit"},
+				{"title": "Pear", "description": "Not meat part"}
+			]`))
+		},
+	))
+
+	defer server.Close()
+
+	hc := NewHTTPClient("NO_API_KEY")
+
+	req, err := http.NewRequest("GET", server.URL, nil)
+	assert.Nil(t, err)
+
+	res := TestArray{}
+	err = hc.SendRequest(req, &res)
+	assert.Nil(t, err)
+	assert.Equal(t, TestArray{
+		{Title: "Apple", Description: "Forbidden fruit"},
+		{Title: "Pear", Description: "Not meat part"},
+	}, res)
+}
+
+// Test HTTPClient function SendRequest with malformatted Json object.
+// Function must return an error with unexpected EOF
+func TestHTTPClientSendRequestErrDecode(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`{"page":1,"count":2,"data":["Apple"]`))
+		},
+	))
+
+	defer server.Close()
+
+	hc := NewHTTPClient("NO_API_KEY")
+
+	req, err := http.NewRequest("GET", server.URL, nil)
+
+	assert.Nil(t, err)
+
+	res := TestStruct{}
+	err = hc.SendRequest(req, &res)
+
+	assert.NotNil(t, err)
+	assert.ErrorIs(t, err, io.ErrUnexpectedEOF)
+}
+
+// Test HTTPClient function SendRequest with Json object not corresponding
+// with struct declaration.
+// Function must return an error about field validation data required
+func TestHTTPClientSendRequestErrValidator(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`{"page":1,"count":2,"donnees":"Apple"}`))
+		},
+	))
+
+	defer server.Close()
+
+	hc := NewHTTPClient("NO_API_KEY")
+
+	req, err := http.NewRequest("GET", server.URL, nil)
+
+	assert.Nil(t, err)
+
+	res := TestStruct{}
+	err = hc.SendRequest(req, &res)
+
+	assert.NotNil(t, err)
+
+	errTarget := errors.New("Key: 'TestStruct.Data' Error:Field validation for 'Data' failed on the 'required' tag")
+	assert.Error(t, err, errTarget)
+}
+
+// Test HTTPClient function GET with Json object
+// Function must return no error and decode response has correct struct
+func TestHTTPClientGet(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`{"page":1,"count":1,"data":["Apple"]}`))
+		},
+	))
+
+	defer server.Close()
+	hc := NewHTTPClient("NO_API_KEY")
+
+	res := TestStruct{}
+	err := hc.Get(server.URL, &res)
+
+	assert.Nil(t, err)
+	assert.Equal(t, TestStruct{
+		Page:  1,
+		Count: 1,
+		Data:  []string{"Apple"},
+	}, res)
+}
+
+// Test HTTPClient function GET on bad url
+// Function must return error
+func TestHTTPClientGetErrorRequest(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`{"page":1,"count":1,"data":["Apple"]}`))
+		},
+	))
+
+	defer server.Close()
+	hc := NewHTTPClient("NO_API_KEY")
+
+	res := TestStruct{}
+	err := hc.Get(server.URL+"yolo", &res)
+
+	assert.NotNil(t, err)
+}
+
+// Test HTTPClient function GET with bad json return
+// Function must return error return by SendRequest
+func TestHTTPClientGetErrorNested(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`{"page":1,"count":2,"data":["Apple"]`))
+		},
+	))
+
+	defer server.Close()
+
+	hc := NewHTTPClient("NO_API_KEY")
+
+	res := TestStruct{}
+	err := hc.Get(server.URL, &res)
+
+	assert.NotNil(t, err)
+	assert.ErrorIs(t, err, io.ErrUnexpectedEOF)
+}
+
+// Test HTTPClient function POST with Json object
+// Function must return no error and decode response has correct struct
+func TestHTTPClientPost(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`{"page":1,"count":1,"data":["Apple"]}`))
+		},
+	))
+
+	defer server.Close()
+	hc := NewHTTPClient("NO_API_KEY")
+
+	res := TestStruct{}
+	err := hc.Post(server.URL, nil, &res)
+
+	assert.Nil(t, err)
+	assert.Equal(t, TestStruct{
+		Page:  1,
+		Count: 1,
+		Data:  []string{"Apple"},
+	}, res)
+}
+
+// Test HTTPClient function POST on bad url
+// Function must return error
+func TestHTTPClientPostErrorRequest(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`{"page":1,"count":1,"data":["Apple"]}`))
+		},
+	))
+
+	defer server.Close()
+	hc := NewHTTPClient("NO_API_KEY")
+
+	res := TestStruct{}
+	err := hc.Post(server.URL+"yolo", nil, &res)
+
+	assert.NotNil(t, err)
+}
+
+// Test HTTPClient function POST with bad json return
+// Function must return error return by SendRequest
+func TestHTTPClientPostErrorNested(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`{"page":1,"count":2,"data":["Apple"]`))
+		},
+	))
+
+	defer server.Close()
+
+	hc := NewHTTPClient("NO_API_KEY")
+
+	res := TestStruct{}
+	err := hc.Post(server.URL, nil, &res)
+
+	assert.NotNil(t, err)
+	assert.ErrorIs(t, err, io.ErrUnexpectedEOF)
+}

@@ -1,24 +1,17 @@
 package deeplgo
 
-import "net/http"
-
 type GlossaryLanguagePairs struct {
 	SupportedLanguages []struct {
-		SourceLang string `json:"source_lang"`
-		TargetLang string `json:"target_lang"`
-	} `json:"supported_languages"`
+		SourceLang string `json:"source_lang" validate:"required"`
+		TargetLang string `json:"target_lang" validate:"required"`
+	} `json:"supported_languages" validate:"required"`
 }
 
 func (c *Client) GetGlossaryLanguagePairs() (*GlossaryLanguagePairs, error) {
 	url := c.baseURL + glossaryLanguagePairsEndpoint
-	req, err := http.NewRequest("GET", url, nil)
-
-	if err != nil {
-		return nil, err
-	}
 
 	res := GlossaryLanguagePairs{}
-	if err := c.sendRequest(req, &res); err != nil {
+	if err := c.httpClient.Get(url, &res); err != nil {
 		return nil, err
 	}
 
