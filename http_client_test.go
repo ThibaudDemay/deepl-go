@@ -227,7 +227,7 @@ func Test_HTTPClient_Get(t *testing.T) {
 	hc := NewHTTPClient("NO_API_KEY")
 
 	res := TestStruct{}
-	err := hc.Get(server.URL, &res)
+	err := hc.Get(server.URL, []QueryParameter{}, &res)
 
 	assert.Nil(t, err)
 	assert.Equal(t, TestStruct{
@@ -235,6 +235,26 @@ func Test_HTTPClient_Get(t *testing.T) {
 		Count: 1,
 		Data:  []string{"Apple"},
 	}, res)
+}
+
+func Test_HTTPClient_GetQueryParameters(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, r.URL.RawQuery, "keyTest=valueTest")
+			w.Write([]byte(`{"page":1,"count":1,"data":["Apple"]}`))
+		},
+	))
+
+	defer server.Close()
+	hc := NewHTTPClient("NO_API_KEY")
+
+	res := TestStruct{}
+	qp := []QueryParameter{
+		{key: "keyTest", value: "valueTest"},
+	}
+	err := hc.Get(server.URL, qp, &res)
+
+	assert.Nil(t, err)
 }
 
 // Test HTTPClient function GET on bad url
@@ -250,7 +270,7 @@ func Test_HTTPClient_GetErrorRequest(t *testing.T) {
 	hc := NewHTTPClient("NO_API_KEY")
 
 	res := TestStruct{}
-	err := hc.Get(server.URL+"yolo", &res)
+	err := hc.Get(server.URL+"yolo", []QueryParameter{}, &res)
 
 	assert.NotNil(t, err)
 }
@@ -269,7 +289,7 @@ func Test_HTTPClient_GetErrorNested(t *testing.T) {
 	hc := NewHTTPClient("NO_API_KEY")
 
 	res := TestStruct{}
-	err := hc.Get(server.URL, &res)
+	err := hc.Get(server.URL, []QueryParameter{}, &res)
 
 	assert.NotNil(t, err)
 	assert.ErrorIs(t, err, io.ErrUnexpectedEOF)

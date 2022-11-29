@@ -11,7 +11,7 @@ func (c *Client) GetGlossaryLanguagePairs() (*GlossaryLanguagePairs, error) {
 	url := c.baseURL + glossaryLanguagePairsEndpoint
 
 	res := GlossaryLanguagePairs{}
-	if err := c.httpClient.Get(url, &res); err != nil {
+	if err := c.httpClient.Get(url, []QueryParameter{}, &res); err != nil {
 		return nil, err
 	}
 

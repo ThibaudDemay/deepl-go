@@ -9,7 +9,7 @@ func (c *Client) GetUsage() (*Usage, error) {
 	url := c.baseURL + usageEndpoint
 
 	res := Usage{}
-	if err := c.httpClient.Get(url, &res); err != nil {
+	if err := c.httpClient.Get(url, []QueryParameter{}, &res); err != nil {
 		return nil, err
 	}
 

@@ -18,6 +18,11 @@ type HTTPClient struct {
 	apiKey   string
 }
 
+type QueryParameter struct {
+	key   string
+	value string
+}
+
 func NewHTTPClient(apiKey string) *HTTPClient {
 	return &HTTPClient{
 		apiKey: apiKey,
@@ -84,8 +89,17 @@ func (hc *HTTPClient) SendRequest(req *http.Request, dataInterface interface{}) 
 }
 
 // Get Wrap request creation and SendRequest call in HTTP GET context
-func (hc *HTTPClient) Get(url string, dataInterface interface{}) error {
+func (hc *HTTPClient) Get(url string, queryParameters []QueryParameter, dataInterface interface{}) error {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
+
+	if len(queryParameters) > 0 {
+		currentQ := req.URL.Query()
+		for _, q := range queryParameters {
+
+			currentQ.Add(q.key, q.value)
+		}
+		req.URL.RawQuery = currentQ.Encode()
+	}
 
 	if err != nil {
 		return err

@@ -21,7 +21,7 @@ func (c *Client) GetLanguages(target LanguageType) (*Languages, error) {
 	url := c.baseURL + fmt.Sprintf(languagesEndpoint, target)
 
 	res := Languages{}
-	if err := c.httpClient.Get(url, &res); err != nil {
+	if err := c.httpClient.Get(url, []QueryParameter{}, &res); err != nil {
 		return nil, err
 	}
 
