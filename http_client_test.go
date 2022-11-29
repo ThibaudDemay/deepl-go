@@ -13,7 +13,7 @@ import (
 
 // Test HTTPClient function ProcessError with request return 404
 // Function must return an error RequestResourceNotFound
-func TestHTTPClientProcessErrorBasic(t *testing.T) {
+func Test_HTTPClient_ProcessErrorBasic(t *testing.T) {
 	body := io.NopCloser(bytes.NewReader([]byte(``)))
 
 	hc := NewHTTPClient("NO_API_KEY")
@@ -29,7 +29,7 @@ func TestHTTPClientProcessErrorBasic(t *testing.T) {
 // Test HTTPClient function ProcessError with data in response (var json)
 // include message only.
 // Function must return an error RequestResourceNotFound with message
-func TestHTTPClientProcessErrorWithMessage(t *testing.T) {
+func Test_HTTPClient_ProcessErrorWithMessage(t *testing.T) {
 	json := `{"message":"Message test"}`
 	body := io.NopCloser(bytes.NewReader([]byte(json)))
 
@@ -47,7 +47,7 @@ func TestHTTPClientProcessErrorWithMessage(t *testing.T) {
 // Test HTTPClient function ProcessError with data in response (var json)
 // include message and detail.
 // Function must return an error ResourceNotFound with message and detail
-func TestHTTPClientProcessErrorWithMessageAndDetail(t *testing.T) {
+func Test_HTTPClient_ProcessErrorWithMessageAndDetail(t *testing.T) {
 	json := `{"message":"Message test","detail":"Detail test"}`
 	body := io.NopCloser(bytes.NewReader([]byte(json)))
 
@@ -64,7 +64,7 @@ func TestHTTPClientProcessErrorWithMessageAndDetail(t *testing.T) {
 
 // Test HTTPClient function ProcessError were http return code not in err list.
 // Function must return an error unknow error with status code
-func TestHTTPClientProcessErrorWithUnknownError(t *testing.T) {
+func Test_HTTPClient_ProcessErrorWithUnknownError(t *testing.T) {
 	body := io.NopCloser(bytes.NewReader([]byte(``)))
 
 	hc := NewHTTPClient("NO_API_KEY")
@@ -88,9 +88,30 @@ type TestArray []struct {
 	Description string `json:"description" validate:"required"`
 }
 
+// Test HTTPClient function SendRequest verify headers Authorization
+func Test_HTTPClient_SendRequestHeaderAuthorization(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, r.Header.Get("Authorization"), "DeepL-Auth-Key AN_API_KEY")
+			w.Write([]byte(`{"page":1,"count":2,"data":["Apple","Pear"]}`))
+		},
+	))
+
+	defer server.Close()
+
+	hc := NewHTTPClient("AN_API_KEY")
+
+	req, err := http.NewRequest("GET", server.URL, nil)
+	assert.Nil(t, err)
+
+	res := TestStruct{}
+	err = hc.SendRequest(req, &res)
+	assert.Nil(t, err)
+}
+
 // Test HTTPClient function SendRequest with Json object.
 // Function must return no error and decode response has correct struct
-func TestHTTPClientSendRequestWithJsonObject(t *testing.T) {
+func Test_HTTPClient_SendRequestWithJsonObject(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`{"page":1,"count":2,"data":["Apple","Pear"]}`))
@@ -116,7 +137,7 @@ func TestHTTPClientSendRequestWithJsonObject(t *testing.T) {
 
 // Test HTTPClient function SendRequest with Json Array.
 // Function must return no error and decode response has correct struct
-func TestHTTPClientSendRequestWithJsonArray(t *testing.T) {
+func Test_HTTPClient_SendRequestWithJsonArray(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`[
@@ -144,7 +165,7 @@ func TestHTTPClientSendRequestWithJsonArray(t *testing.T) {
 
 // Test HTTPClient function SendRequest with malformatted Json object.
 // Function must return an error with unexpected EOF
-func TestHTTPClientSendRequestErrDecode(t *testing.T) {
+func Test_HTTPClient_SendRequestErrDecode(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`{"page":1,"count":2,"data":["Apple"]`))
@@ -169,7 +190,7 @@ func TestHTTPClientSendRequestErrDecode(t *testing.T) {
 // Test HTTPClient function SendRequest with Json object not corresponding
 // with struct declaration.
 // Function must return an error about field validation data required
-func TestHTTPClientSendRequestErrValidator(t *testing.T) {
+func Test_HTTPClient_SendRequestErrValidator(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`{"page":1,"count":2,"donnees":"Apple"}`))
@@ -195,7 +216,7 @@ func TestHTTPClientSendRequestErrValidator(t *testing.T) {
 
 // Test HTTPClient function GET with Json object
 // Function must return no error and decode response has correct struct
-func TestHTTPClientGet(t *testing.T) {
+func Test_HTTPClient_Get(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`{"page":1,"count":1,"data":["Apple"]}`))
@@ -218,7 +239,7 @@ func TestHTTPClientGet(t *testing.T) {
 
 // Test HTTPClient function GET on bad url
 // Function must return error
-func TestHTTPClientGetErrorRequest(t *testing.T) {
+func Test_HTTPClient_GetErrorRequest(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`{"page":1,"count":1,"data":["Apple"]}`))
@@ -236,7 +257,7 @@ func TestHTTPClientGetErrorRequest(t *testing.T) {
 
 // Test HTTPClient function GET with bad json return
 // Function must return error return by SendRequest
-func TestHTTPClientGetErrorNested(t *testing.T) {
+func Test_HTTPClient_GetErrorNested(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`{"page":1,"count":2,"data":["Apple"]`))
@@ -256,7 +277,7 @@ func TestHTTPClientGetErrorNested(t *testing.T) {
 
 // Test HTTPClient function POST with Json object
 // Function must return no error and decode response has correct struct
-func TestHTTPClientPost(t *testing.T) {
+func Test_HTTPClient_Post(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`{"page":1,"count":1,"data":["Apple"]}`))
@@ -279,7 +300,7 @@ func TestHTTPClientPost(t *testing.T) {
 
 // Test HTTPClient function POST on bad url
 // Function must return error
-func TestHTTPClientPostErrorRequest(t *testing.T) {
+func Test_HTTPClient_PostErrorRequest(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`{"page":1,"count":1,"data":["Apple"]}`))
@@ -297,7 +318,7 @@ func TestHTTPClientPostErrorRequest(t *testing.T) {
 
 // Test HTTPClient function POST with bad json return
 // Function must return error return by SendRequest
-func TestHTTPClientPostErrorNested(t *testing.T) {
+func Test_HTTPClient_PostErrorNested(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`{"page":1,"count":2,"data":["Apple"]`))

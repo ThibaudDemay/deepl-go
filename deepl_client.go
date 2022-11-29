@@ -3,6 +3,7 @@ package deeplgo
 import (
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -61,12 +62,31 @@ type Client struct {
 func NewClient(apiKey string) *Client {
 	httpClient := NewHTTPClient(apiKey)
 
-	baseURL := baseProUrl
-	if strings.HasSuffix(apiKey, ":fx") {
-		baseURL = baseFreeUrl
+	baseURL, hasServerUrl := os.LookupEnv("DEEPL_SERVER_URL")
+	if !hasServerUrl {
+		baseURL = baseProUrl
+		if strings.HasSuffix(apiKey, ":fx") {
+			baseURL = baseFreeUrl
+		}
 	}
 	return &Client{
 		baseURL:    baseURL,
 		httpClient: httpClient,
 	}
+}
+
+func (c *Client) GetApiKey() string {
+	return c.httpClient.apiKey
+}
+
+func (c *Client) SetApiKey(apiKey string) {
+	c.httpClient.apiKey = apiKey
+}
+
+func (c *Client) GetBaseUrl() string {
+	return c.baseURL
+}
+
+func (c *Client) SetBaseUrl(serverUrl string) {
+	c.baseURL = serverUrl
 }
