@@ -17,7 +17,7 @@ const (
 	Target LanguageType = "target"
 )
 
-func (c *Client) GetLanguages(target LanguageType) (*Languages, error) {
+func (c *Client) GetLanguages(target LanguageType, option ...string) (*Languages, error) {
 	url := c.baseURL + fmt.Sprintf(languagesEndpoint, target)
 
 	res := Languages{}
@@ -28,10 +28,10 @@ func (c *Client) GetLanguages(target LanguageType) (*Languages, error) {
 	return &res, nil
 }
 
-func (c *Client) GetSourceLanguages() (*Languages, error) {
-	return c.GetLanguages(Source)
+func (c *Client) GetSourceLanguages(options ...string) (*Languages, error) {
+	return c.GetLanguages(Source, options...)
 }
 
-func (c *Client) GetTargetLanguages() (*Languages, error) {
-	return c.GetLanguages(Target)
+func (c *Client) GetTargetLanguages(options ...string) (*Languages, error) {
+	return c.GetLanguages(Target, options...)
 }
